@@ -11,27 +11,38 @@ import sys
 from getpass import getpass  # Import getpass for secure PIN entry
 
 # Constants
-FILE_PATH = 'data.bin'
+FILE_PATH = 'keycub.bin'
 ENCRYPTION_KEY_SIZE = 32  # AES-256 requires a 32-byte key
 MAX_ATTEMPTS = 5
+# ANSI color codes
+GREY = '\033[90m'
+RED = '\033[31m'
+GREEN = '\033[32m'
+YELLOW = '\033[93m'
+BLUE = '\033[34m'
+MAGENTA = '\033[95m'
+CYAN = '\033[96m'
+WHITE = '\033[97m'
+RESET = '\033[0m'
+
 
 def get_pin_from_user():
     """
     Prompt user to enter a 6-digit PIN code.
     """
     while True:
-        pin = getpass("PIN: ").strip()  # Use getpass to hide PIN input
+        pin = getpass(f"{WHITE}PIN: {MAGENTA}").strip()  # Use getpass to hide PIN input
         if len(pin) == 6 and pin.isdigit():
             return pin
-        print("Invalid PIN code. Must be exactly 6 digits.")
+        print(f"{RED}Invalid PIN code. Must be exactly 6 digits.{RESET}")
 
 def get_service_details_from_user():
     """
     Prompt user to enter service details (name, username, password).
     """
-    service = input("Enter the name of the service: ").strip()
-    username = input("Enter the username: ").strip()
-    password = input("Enter the password: ").strip()
+    service = input(f"{WHITE}Enter the {YELLOW}new service name{RESET}: ").strip()
+    username = input(f"{WHITE}Enter the {YELLOW}new username{RESET}: ").strip()
+    password = input(f"{WHITE}Enter the {YELLOW}new password{RESET}: ").strip()
     timestamp = datetime.now().strftime('%d-%m-%Y')
     return service, username, password, timestamp
 
@@ -148,20 +159,22 @@ def wipe_file():
     """
     if os.path.exists(FILE_PATH):
         os.remove(FILE_PATH)
-        print("File wiped successfully.")
+        print(f"{WHITE}File wiped successfully.{RESET}")
         sys.exit()  # Exit the program immediately after wiping the file
     else:
         print("No file to wipe.")
 
 def main():
 
-    print(f"  _  __          ___     _     ")
-    print(f" | |/ /___ _  _ / __|  _| |__  ")
-    print(f" | ' </ -_) || | (_| || | '_ \ ")
-    print(f" |_|\_\___|\_, |\___\_,_|_.__/ ")
-    print(f"           |__/                ")
-    print(f"David Beneš 2025 (c)")
+    print(f"{MAGENTA}    __ __                  ______            __  ")
+    print(f"   / //_/  ___    __  __  / ____/  __  __   / /_ ")
+    print(f"{CYAN}  / ,<    / _ \  / / / / / /      / / / /  / __ \ ")
+    print(f" / /| |  /  __/ / /_/ / / /___   / /_/ /  / /_/ /")
+    print(f"{YELLOW}/_/ |_|  \___/  \__, /  \____/   \__,_/  /_.___/ ")
+    print(f"               /____/                                    ")
+    print(f"{GREY}David Beneš 2025 \u00A9{RESET}")
     print(f"\n")
+
 
     # Load existing data from file or initialize empty data
     data = load_from_file() or {'pin_hash': None, 'encrypted_services': None, 'salt': None}
@@ -173,7 +186,6 @@ def main():
     if 'pin_hash' in data and 'encrypted_services' in data and data['salt']:
         # File exists and salt is present, prompt for PIN verification
         while True:
-            print("Enter your 6-digit PIN.")
             pin = get_pin_from_user()
 
             # Verify PIN
@@ -190,17 +202,18 @@ def main():
                 key = hashed_pin[:ENCRYPTION_KEY_SIZE]
                 encrypted_services = urlsafe_b64decode(data['encrypted_services'].encode('utf-8'))
                 decrypted_services = decrypt_service(encrypted_services, key)
-                print("Password list:")
+                print(f"\n{WHITE}Saved Passwords{RESET}")
+                print(f"{WHITE}----------------{RESET}")
                 for idx, service in enumerate(decrypted_services, start=1):
-                    print(f"{idx}. {service['name']} ({service['timestamp']})\n   Username: {service['username']}\n   Password: {service['password']}\n")
+                    print(f"{MAGENTA}{idx}.{WHITE} {service['name']} ({service['timestamp']}){RESET}\n   Username: {service['username']}\n   Password: {service['password']}\n")
 
                 # Prompt user to choose next action
                 while True:
-                    action = input("Do you want to add, edit, delete, wipe the list, or exit? (add/edit/delete/wipe/exit): ").strip().lower()
+                    action = input(f"{WHITE}Do you want to add, edit, delete or wipe the list?{RESET} (add/edit/delete/wipe/exit):").strip().lower()
                     if action == "add":
                         service, username, password, timestamp = get_service_details_from_user()
                         if not service or not username or not password:
-                            print("Incomplete service details provided. Password not saved.")
+                            print(f"{RED} Incomplete service details provided. Password not saved.{RESET}")
                             continue
                         # Add new service to the decrypted services list
                         decrypted_services.append({
@@ -211,53 +224,54 @@ def main():
                         })
                     elif action == "edit":
                         try:
-                            service_number = int(input("Enter the number of the password you wish to edit: ").strip())
+                            service_number = int(input(f"{WHITE}Enter the {MAGENTA}number{WHITE} of the service you wish to edit: {RESET}").strip())
                             if service_number < 1 or service_number > len(decrypted_services):
                                 raise ValueError
                             service = decrypted_services[service_number - 1]
-                            username = input("Enter the new username: ").strip()
-                            password = input("Enter the new password: ").strip()
+                            print(f"\n{YELLOW}Service to be edited:{WHITE}\n   {service['name']} ({service['timestamp']}){RESET}\n   Username: {service['username']}\n   Password: {service['password']}\n{RESET}")
+                            username = input(f"{WHITE}Enter the {YELLOW}updated username{RESET}{WHITE}: {RESET}").strip()
+                            password = input(f"{WHITE}Enter the {YELLOW}updated password{RESET}{WHITE}: {RESET}").strip()
                             if not username or not password:
-                                print("Incomplete details provided. Password not updated.")
+                                print(f"{RED}Incomplete details provided. Password not updated.{RESET}")
                             else:
                                 service['username'] = username
                                 service['password'] = password
                                 service['timestamp'] = datetime.now().strftime('%d-%m-%Y')
-                                print("Updated List:")
+                                print(f"{YELLOW}Updated List:{RESET}")
                                 for idx, service in enumerate(decrypted_services, start=1):
-                                    print(f"{idx}. {service['name']} ({service['timestamp']})\n   Username: {service['username']}\n   Password: {service['password']}\n")
-                                print("Password updated successfully.")
+                                    print(f"{WHITE}{idx}. {service['name']} ({service['timestamp']}){RESET}\n   Username: {service['username']}\n   Password: {service['password']}\n")
+                                print(f"{YELLOW}Password updated successfully.{RESET}")
                         except ValueError:
-                            print("Invalid service number.")
+                            print(f"{RED}Invalid service number.{RESET}")
                     elif action == "delete":
                         try:
-                            service_number = int(input("Enter the number of the password you wish to delete: ").strip())
+                            service_number = int(input(f"{WHITE}Enter the {MAGENTA}number{WHITE} of the password to be deleted: {RESET}").strip())
                             if service_number < 1 or service_number > len(decrypted_services):
                                 raise ValueError
                             service = decrypted_services[service_number - 1]
-                            print(f"Service to be deleted:\n {service['name']} ({service['timestamp']})\n   Username: {service['username']}\n   Password: {service['password']}\n")
-                            confirm_delete = input("Are you sure you want to delete this password? (y/n): ").strip().lower()
+                            print(f"{YELLOW}Service to be deleted:\n {service['name']} ({service['timestamp']})\n   Username: {service['username']}\n   Password: {service['password']}\n{RESET}")
+                            confirm_delete = input(f"{YELLOW}Are you sure you want to delete this password?{RESET} (y/n): ").strip().lower()
                             if confirm_delete == 'y':
                                 decrypted_services.pop(service_number - 1)
-                                print("Password deleted successfully.")
+                                print(f"{YELLOW}Password deleted successfully.{RESET}")
                             else:
-                                print("Deletion cancelled.")
+                                print(f"{MAGENTA}Deletion cancelled.{RESET}")
                         except ValueError:
-                            print("Invalid password number.")
+                            print(f"{RED}Invalid password number.{RESET}")
                     elif action == "wipe":
-                        confirm_wipe = input("Are you sure you want to wipe the whole password list? (y/n): ").strip().lower()
+                        confirm_wipe = input(f"{YELLOW}Are you sure you want to wipe the whole password list?{RESET} (y/n): ").strip().lower()
                         if confirm_wipe == 'y':
                             wipe_file()
                             data = {'pin_hash': None, 'encrypted_services': None, 'salt': None}
                             save_to_file(data)
                         else:
-                            print("Wipe cancelled.")
+                            print(f"{MAGENTA}Wipe cancelled.{RESET}")
                         continue
                     elif action == "exit":
-                        print("Exiting...")
+                        print(f"{GREY}Exiting...{RESET}")
                         sys.exit()
                     else:
-                        print("Invalid action. Please choose 'add', 'edit', 'delete', 'wipe', or 'exit'.")
+                        print(f"{RED}Invalid action. Please type 'add', 'edit', 'delete', 'wipe', or 'exit'.{RESET}")
                         continue
 
                     # Encrypt the updated services list
@@ -267,21 +281,21 @@ def main():
                     # Save updated data to file
                     save_to_file(data)
                     # Prompt to add/edit more services
-                    more_actions = input("Do you want to add/edit more services? (yes/no): ").strip().lower()
+                    more_actions = input(f"{WHITE}Do you want to make more changes?{RESET} (yes/no): ").strip().lower()
                     if more_actions != 'yes':
                         break
                 break
             else:
                 # Wrong PIN
                 wrong_attempts += 1
-                print(f"Wrong pin. Attempt {wrong_attempts}/{MAX_ATTEMPTS}.")
+                print(f"{RED}Wrong PIN.{RESET} Attempt {wrong_attempts}/{MAX_ATTEMPTS}.")
                 if wrong_attempts >= MAX_ATTEMPTS:
-                    print("Maximum attempts reached. Wiping the file.")
+                    print(f"{RED}Maximum attempts reached. Wiping the file.{RESET}")
                     wipe_file()
 
     else:
         # File does not exist or data is missing, create new data
-        print("Please create a new KeyCub file by entering a 6-digit PIN.")
+        print(f"{WHITE}Create a new KeyCub file by entering a 6-digit PIN.{RESET}")
         pin = get_pin_from_user()
 
         # Initialize services list
@@ -291,7 +305,7 @@ def main():
             # Get service details
             service, username, password, timestamp = get_service_details_from_user()
             if not service or not username or not password:
-                print("Incomplete service details provided. Exiting.")
+                print(f"{GREY}Incomplete service details provided. Exiting.{RESET}")
                 break
 
             # Add service details to list
@@ -303,7 +317,7 @@ def main():
             })
 
             # Prompt to add more services
-            add_more = input("Do you want to add more services? (yes/no): ").strip().lower()
+            add_more = input(f"{WHITE}Do you want to add more services?{RESET} (yes/no): ").strip().lower()
             if add_more != 'yes':
                 break
 
