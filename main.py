@@ -1,4 +1,5 @@
 import os
+import ctypes
 import json
 import uuid
 from datetime import datetime
@@ -25,6 +26,17 @@ CYAN = '\033[96m'
 WHITE = '\033[97m'
 RESET = '\033[0m'
 
+
+def enable_virtual_terminal_processing():
+    if os.name == 'nt':
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE = -11
+        mode = ctypes.c_ulong()
+        kernel32.GetConsoleMode(handle, ctypes.byref(mode))
+        mode.value |= 0x0004  # ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+        kernel32.SetConsoleMode(handle, mode)
+
+enable_virtual_terminal_processing()
 
 def get_pin_from_user():
     """
