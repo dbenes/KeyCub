@@ -49,13 +49,13 @@ def get_pin_from_user():
     sys.stdout.write(f"{WHITE}PIN: {MAGENTA}")
     sys.stdout.flush()
 
-    while len(pin) < 6:
+    while True:
         ch = msvcrt.getwch()  # Get a single character input without echoing to console
-        if ch.isdigit():
+        if ch.isdigit() and len(pin) < 6:
             pin += ch
             sys.stdout.write('⬤')
             sys.stdout.flush()
-        elif ch == '\r' or ch == '\n':  # Handle Enter key press
+        elif (ch == '\r' or ch == '\n') and len(pin) == 6:  # Handle Enter key press only if PIN is 6 digits
             break
         elif ch == '\b':  # Handle Backspace key press
             if pin:
@@ -123,7 +123,6 @@ def generate_key_from_mac():
     )
     key = kdf.derive(salt)
     return key
-
 
 def encrypt_service(service_details, key):
     """
@@ -197,7 +196,13 @@ def load_from_file():
     else:
         return None
 
-
+def print_all_passwords(decrypted_services):
+    clear_screen()
+    print(f"\n{WHITE}Saved Passwords{RESET}")
+    print(f"{WHITE}----------------{RESET}")
+    for idx, service in enumerate(decrypted_services, start=1):
+        print(
+            f"{MAGENTA}{idx}.{WHITE} {service['name']} ({service['timestamp']}){RESET}\n   Username: {service['username']}\n   Password: {service['password']}\n")
 def wipe_file():
     """
     Wipe the contents of the .bin file.
@@ -214,25 +219,22 @@ def clear_screen():
         os.system('cls')
     else:  # For Unix-like systems (Linux, macOS)
         os.system('clear')
-
-
+    print(f"{MAGENTA}    __ __                  ______            __  ")
+    print(f"   / //_/  ___    __  __  / ____/  __  __   / /_ ")
+    print(f"{CYAN}  / ,<    / _ \  / / / / / /      / / / /  / __ \ ")
+    print(f" / /| |  /  __/ / /_/ / / /___   / /_/ /  / /_/ /")
+    print(f"{YELLOW}/_/ |_|  \___/  \__, /  \____/   \__,_/  /_.___/ ")
+    print(f"               /____/                                    ")
+    print(f"{GREY}Version 0.9 - David Beneš 2025 \u00A9{RESET}")
 def main():
-
     # Load existing data from file or initialize empty data
-    data = load_from_file() or {'pin_hash': None, 'encrypted_services': None, 'salt': None}
+    data = load_from_file() or {'pin_hash': None, 'encrypted_services': None, 'salt': None, 'wrong_attempts': 0}
 
     # Initialize the wrong attempt counter
-    wrong_attempts = 0
+    wrong_attempts = data.get('wrong_attempts', 0)
 
     while True:
-        print(f"{MAGENTA}    __ __                  ______            __  ")
-        print(f"   / //_/  ___    __  __  / ____/  __  __   / /_ ")
-        print(f"{CYAN}  / ,<    / _ \  / / / / / /      / / / /  / __ \ ")
-        print(f" / /| |  /  __/ / /_/ / / /___   / /_/ /  / /_/ /")
-        print(f"{YELLOW}/_/ |_|  \___/  \__, /  \____/   \__,_/  /_.___/ ")
-        print(f"               /____/                                    ")
-        print(f"{GREY}Version 0.8 - David Beneš 2025 \u00A9{RESET}")
-        print(f"\n")
+        clear_screen()
         if 'pin_hash' in data and 'encrypted_services' in data and data['salt']:
             # File exists and salt is present, prompt for PIN verification
             while True:
@@ -247,6 +249,8 @@ def main():
                         print(f"\nNumber of failed login attempts: {wrong_attempts}")
                     # Reset wrong attempts counter
                     wrong_attempts = 0
+                    data['wrong_attempts'] = wrong_attempts
+                    save_to_file(data)  # Save the reset counter
 
                     # Decrypt the services
                     key = hashed_pin[:ENCRYPTION_KEY_SIZE]
@@ -274,8 +278,10 @@ def main():
                                 'password': password,
                                 'timestamp': timestamp
                             })
+                            print_all_passwords(decrypted_services)
                             print(f"{MAGENTA}\nSaved to KeyCub.\n{RESET}")
                         elif action == "edit":
+                            clear_screen()
                             print(f"\n{WHITE}Saved Passwords{RESET}")
                             print(f"{WHITE}----------------{RESET}")
                             for idx, service in enumerate(decrypted_services, start=1):
@@ -299,15 +305,12 @@ def main():
                                     service['username'] = username
                                     service['password'] = password
                                     service['timestamp'] = datetime.now().strftime('%d-%b-%Y')
-                                    print(f"\n{WHITE}Saved Passwords{RESET}")
-                                    print(f"{WHITE}----------------{RESET}")
-                                    for idx, service in enumerate(decrypted_services, start=1):
-                                        print(
-                                            f"{MAGENTA}{idx}.{WHITE} {service['name']} ({service['timestamp']}){RESET}\n   Username: {service['username']}\n   Password: {service['password']}\n")
+                                    print_all_passwords(decrypted_services)
                                     print(f"{MAGENTA}Password updated successfully.{RESET}")
                             except ValueError:
                                 print(f"{RED}\nPlease enter a valid service number from the list.{RESET}")
                         elif action == "delete":
+                            clear_screen()
                             print(f"\n{WHITE}Saved Passwords{RESET}")
                             print(f"{WHITE}----------------{RESET}")
                             for idx, service in enumerate(decrypted_services, start=1):
@@ -325,6 +328,7 @@ def main():
                                     f"{RED}Are you sure you want to delete this password?{RESET} (yes/no): ").strip().lower()
                                 if confirm_delete == 'y' or confirm_delete == 'yes':
                                     decrypted_services.pop(service_number - 1)
+                                    print_all_passwords(decrypted_services)
                                     print(f"{MAGENTA}\nPassword deleted successfully.{RESET}")
                                 else:
                                     print(f"{MAGENTA}\nDeletion cancelled.{RESET}")
@@ -335,7 +339,7 @@ def main():
                                 f"{YELLOW}\nAre you sure you want to wipe the whole password list?{RESET} (yes/no): ").strip().lower()
                             if confirm_wipe == 'y' or confirm_wipe == 'yes':
                                 wipe_file()
-                                data = {'pin_hash': None, 'encrypted_services': None, 'salt': None}
+                                data = {'pin_hash': None, 'encrypted_services': None, 'salt': None, 'wrong_attempts': 0}
                                 save_to_file(data)
                                 print(f"{MAGENTA}\nKeyCub wiped all passwords.{RESET}")
                             else:
@@ -355,19 +359,24 @@ def main():
                         # Save updated data to file
                         save_to_file(data)
                         # Prompt to add/edit more services
-                        more_actions = input(
-                            f"{WHITE}\nDo you want to make more changes?{RESET} (yes/no): ").strip().lower()
-                        if more_actions != 'yes' and more_actions != 'y':
-                            clear_screen()  # Clear screen if user does not want to make more changes
-                            break
+                        #more_actions = input(
+                            #f"{WHITE}\nDo you want to make more changes?{RESET} (yes/no): ").strip().lower()
+                        #if more_actions != 'yes' and more_actions != 'y':
+                            #clear_screen()  # Clear screen if user does not want to make more changes
+
                     break
                 else:
                     # Wrong PIN
                     wrong_attempts += 1
+                    data['wrong_attempts'] = wrong_attempts
+                    save_to_file(data)  # Save the wrong attempt counter
                     print(f"{RED}\nWrong PIN. Attempt {wrong_attempts}/{MAX_ATTEMPTS}.{RESET}\n")
                     if wrong_attempts >= MAX_ATTEMPTS:
                         print(f"{RED}\nMaximum attempts reached. Wiping the file.\n{RESET}")
                         wipe_file()
+                        data = {'pin_hash': None, 'encrypted_services': None, 'salt': None, 'wrong_attempts': 0}
+                        save_to_file(data)
+                        break
 
         else:
             # File does not exist or data is missing, create new data
@@ -387,6 +396,7 @@ def main():
             data['pin_hash'] = urlsafe_b64encode(pin_hash).decode('utf-8')
             data['encrypted_services'] = urlsafe_b64encode(encrypted_services).decode('utf-8')
             data['salt'] = urlsafe_b64encode(salt).decode('utf-8')
+            data['wrong_attempts'] = 0
             save_to_file(data)
             # Wait until the file is created
             while not os.path.exists(FILE_PATH):
