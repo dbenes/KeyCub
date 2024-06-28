@@ -380,7 +380,7 @@ def main():
 
         else:
             # File does not exist or data is missing, create new data
-            print(f"{WHITE}\nCreate a new KeyCub file by entering a 6-digit PIN.\n{RESET}")
+            print(f"{YELLOW}\nNo KeyCub file found{WHITE}\nCreate a new KeyCub file by entering a 6-digit PIN.\n{RESET}")
             pin = get_pin_from_user()
 
             # Initialize services list
