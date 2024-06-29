@@ -1,4 +1,5 @@
 import os
+import csv
 import ctypes
 import json
 import uuid
@@ -39,6 +40,36 @@ def enable_virtual_terminal_processing():
 
 
 enable_virtual_terminal_processing()
+
+def import_from_csv(filepath, decrypted_services):
+    try:
+        with open(filepath, 'r', newline='', encoding='utf-8-sig') as csvfile:
+            csvreader = csv.reader(csvfile)
+            next(csvreader)  # Skip the header row
+            for row in csvreader:
+                if all(cell.strip() == "" for cell in row):
+                    break  # Stop if the row is entirely blank
+                if len(row) < 4:
+                    continue  # Skip rows that do not have enough columns
+                service = row[0]
+                username = row[2]
+                password = row[3]
+                timestamp = datetime.now().strftime('%d-%b-%Y')
+                decrypted_services.append({
+                    'name': service,
+                    'username': username,
+                    'password': password,
+                    'timestamp': timestamp
+                })
+        print_all_passwords(decrypted_services)
+        print(f"{MAGENTA}\nPasswords imported succesfully.\n{RESET}")
+    except FileNotFoundError:
+        print(f"{RED}\nError: File not found.\n{RESET}")
+    except UnicodeDecodeError as e:
+        print(f"{RED}\nAn error occurred while importing CSV: {e}\n{RESET}")
+    except Exception as e:
+        print(f"{RED}\nAn unexpected error occurred while importing CSV: {e}\n{RESET}")
+
 
 
 def get_pin_from_user():
@@ -265,7 +296,7 @@ def main():
                     # Prompt user to choose next action
                     while True:
                         action = input(
-                            f"{WHITE}\nDo you want to {YELLOW}add{RESET}{WHITE}, {MAGENTA}edit{RESET}{WHITE}, {RED}delete{RESET}{WHITE}, {CYAN}wipe{WHITE} or {RESET}exit{WHITE}:{RESET} ").strip().lower()
+                            f"{WHITE}\nDo you want to {YELLOW}add{RESET}{WHITE}, {MAGENTA}edit{RESET}{WHITE}, {RED}delete{RESET}{WHITE}, {CYAN}wipe{WHITE}, {GREEN}import{WHITE} from Chrome or {RESET}exit{WHITE}:{RESET} ").strip().lower()
                         if action == "add":
                             service, username, password, timestamp = get_service_details_from_user()
                             if not service or not username or not password:
@@ -345,6 +376,10 @@ def main():
                             else:
                                 print(f"{MAGENTA}\nWipe cancelled.\n{RESET}")
                             continue
+                        elif action == "import":
+                            file_path = input(f"{WHITE}\nDrag and drop your \"Chrome Passwords.csv\" file here, then press enter: {RESET}").strip()
+                            file_path = file_path.strip('"')  # Remove quotes from the file path
+                            import_from_csv(file_path, decrypted_services)
                         elif action == "exit":
                             print(f"{GREY}\nExiting...\n{RESET}")
                             sys.exit()
