@@ -256,7 +256,7 @@ def clear_screen():
     print(f" / /| |  /  __/ / /_/ / / /___   / /_/ /  / /_/ /")
     print(f"{YELLOW}/_/ |_|  \___/  \__, /  \____/   \__,_/  /_.___/ ")
     print(f"               /____/                                    ")
-    print(f"{GREY}Version 0.9 - David Beneš 2025 \u00A9{RESET}")
+    print(f"{GREY}Version 0.95 - David Beneš 2025 \u00A9{RESET}")
 def main():
     # Load existing data from file or initialize empty data
     data = load_from_file() or {'pin_hash': None, 'encrypted_services': None, 'salt': None, 'wrong_attempts': 0}
