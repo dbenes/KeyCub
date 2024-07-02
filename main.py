@@ -256,7 +256,7 @@ def clear_screen():
     print(f" / /| |  /  __/ / /_/ / / /___   / /_/ /  / /_/ /")
     print(f"{YELLOW}/_/ |_|  \___/  \__, /  \____/   \__,_/  /_.___/ ")
     print(f"               /____/                                    ")
-    print(f"{GREY}Version 0.95 - David Beneš 2025 \u00A9{RESET}")
+    print(f"{GREY}Version 1.1 - David Beneš 2025 \u00A9{RESET}")
 def main():
     # Load existing data from file or initialize empty data
     data = load_from_file() or {'pin_hash': None, 'encrypted_services': None, 'salt': None, 'wrong_attempts': 0}
@@ -293,111 +293,8 @@ def main():
                         print(
                             f"{MAGENTA}{idx}.{WHITE} {service['name']} ({service['timestamp']}){RESET}\n   Username: {service['username']}\n   Password: {service['password']}\n")
 
-                    # Prompt user to choose next action
-                    while True:
-                        action = input(
-                            f"{WHITE}\nDo you want to {YELLOW}add{RESET}{WHITE}, {MAGENTA}edit{RESET}{WHITE}, {RED}delete{RESET}{WHITE}, {CYAN}wipe{WHITE}, {GREEN}import{WHITE} from Chrome or {RESET}exit{WHITE}:{RESET} ").strip().lower()
-                        if action == "add":
-                            service, username, password, timestamp = get_service_details_from_user()
-                            if not service or not username or not password:
-                                print(f"{RED}\nService, username and password cannot be blank. Password not saved.{RESET}")
-                                continue
-                            # Add new service to the decrypted services list
-                            decrypted_services.append({
-                                'name': service,
-                                'username': username,
-                                'password': password,
-                                'timestamp': timestamp
-                            })
-                            print_all_passwords(decrypted_services)
-                            print(f"{MAGENTA}\nSaved to KeyCub.\n{RESET}")
-                        elif action == "edit":
-                            clear_screen()
-                            print(f"\n{WHITE}Saved Passwords{RESET}")
-                            print(f"{WHITE}----------------{RESET}")
-                            for idx, service in enumerate(decrypted_services, start=1):
-                                print(
-                                    f"{MAGENTA}{idx}.{WHITE} {service['name']} ({service['timestamp']}){RESET}\n   Username: {service['username']}\n   Password: {service['password']}\n")
-                            try:
-                                service_number = int(input(
-                                    f"{WHITE}\nEnter the {MAGENTA}number{WHITE} of the service you wish to edit: {RESET}").strip())
-                                if service_number < 1 or service_number > len(decrypted_services):
-                                    raise ValueError
-                                service = decrypted_services[service_number - 1]
-                                print(
-                                    f"\n{YELLOW}Service to be edited:{WHITE}\n   {service['name']} ({service['timestamp']}){RESET}\n   Username: {service['username']}\n   Password: {service['password']}\n{RESET}")
-                                username = input(
-                                    f"{WHITE}Enter the {YELLOW}updated username{RESET}{WHITE}: {RESET}").strip()
-                                password = input(
-                                    f"{WHITE}Enter the {YELLOW}updated password{RESET}{WHITE}: {RESET}").strip()
-                                if not username or not password:
-                                    print(f"{RED}\nService, username and password cannot be blank. Password not saved.{RESET}")
-                                else:
-                                    service['username'] = username
-                                    service['password'] = password
-                                    service['timestamp'] = datetime.now().strftime('%d-%b-%Y')
-                                    print_all_passwords(decrypted_services)
-                                    print(f"{MAGENTA}Password updated successfully.{RESET}")
-                            except ValueError:
-                                print(f"{RED}\nPlease enter a valid service number from the list.{RESET}")
-                        elif action == "delete":
-                            clear_screen()
-                            print(f"\n{WHITE}Saved Passwords{RESET}")
-                            print(f"{WHITE}----------------{RESET}")
-                            for idx, service in enumerate(decrypted_services, start=1):
-                                print(
-                                    f"{MAGENTA}{idx}.{WHITE} {service['name']} ({service['timestamp']}){RESET}\n   Username: {service['username']}\n   Password: {service['password']}\n")
-                            try:
-                                service_number = int(input(
-                                    f"{WHITE}\nEnter the {MAGENTA}number{WHITE} of the service to be deleted: {RESET}").strip())
-                                if service_number < 1 or service_number > len(decrypted_services):
-                                    raise ValueError
-                                service = decrypted_services[service_number - 1]
-                                print(
-                                    f"{RED}\nService to be deleted:\n{WHITE} {service['name']} ({service['timestamp']})\n{RESET}   Username: {service['username']}\n   Password: {service['password']}\n{RESET}")
-                                confirm_delete = input(
-                                    f"{RED}Are you sure you want to delete this password?{RESET} (yes/no): ").strip().lower()
-                                if confirm_delete == 'y' or confirm_delete == 'yes':
-                                    decrypted_services.pop(service_number - 1)
-                                    print_all_passwords(decrypted_services)
-                                    print(f"{MAGENTA}\nPassword deleted successfully.{RESET}")
-                                else:
-                                    print(f"{MAGENTA}\nDeletion cancelled.{RESET}")
-                            except ValueError:
-                                print(f"{RED}\nPlease enter in valid service number from the list.{RESET}")
-                        elif action == "wipe":
-                            confirm_wipe = input(
-                                f"{YELLOW}\nAre you sure you want to wipe the whole password list?{RESET} (yes/no): ").strip().lower()
-                            if confirm_wipe == 'y' or confirm_wipe == 'yes':
-                                wipe_file()
-                                data = {'pin_hash': None, 'encrypted_services': None, 'salt': None, 'wrong_attempts': 0}
-                                save_to_file(data)
-                                print(f"{MAGENTA}\nKeyCub wiped all passwords.{RESET}")
-                            else:
-                                print(f"{MAGENTA}\nWipe cancelled.\n{RESET}")
-                            continue
-                        elif action == "import":
-                            file_path = input(f"{WHITE}\nDrag and drop your \"Chrome Passwords.csv\" file here, then press enter: {RESET}").strip()
-                            file_path = file_path.strip('"')  # Remove quotes from the file path
-                            import_from_csv(file_path, decrypted_services)
-                        elif action == "exit":
-                            print(f"{GREY}\nExiting...\n{RESET}")
-                            sys.exit()
-                        else:
-                            print(f"{RED}\nPlease type out one of the listed actions.{RESET}")
-                            continue
-
-                        # Encrypt the updated services list
-                        encrypted_services = encrypt_service(decrypted_services, key)
-                        # Update the data dictionary with encrypted services
-                        data['encrypted_services'] = urlsafe_b64encode(encrypted_services).decode('utf-8')
-                        # Save updated data to file
-                        save_to_file(data)
-                        # Prompt to add/edit more services
-                        #more_actions = input(
-                            #f"{WHITE}\nDo you want to make more changes?{RESET} (yes/no): ").strip().lower()
-                        #if more_actions != 'yes' and more_actions != 'y':
-                            #clear_screen()  # Clear screen if user does not want to make more changes
+                    # Enter action loop
+                    action_loop(decrypted_services, key, data)
 
                     break
                 else:
@@ -439,42 +336,112 @@ def main():
 
             print(f"{MAGENTA}\nYour KeyCub secure password list has been created.\n{RESET}")
 
-            # Prompt to add services
-            add_services = input(
-                f"{WHITE}Do you want to {YELLOW}add{WHITE} passwords to the list now?{RESET} (yes/no): ").strip().lower()
-            if add_services == 'yes' or add_services == 'y' or add_services == 'add':
-                while True:
-                    service, username, password, timestamp = get_service_details_from_user()
-                    if not service or not username or not password:
-                        print(f"{RED}\nService, username and password cannot be blank. Password not saved.{RESET}")
-                        continue
-                    services.append({
-                        'name': service,
-                        'username': username,
-                        'password': password,
-                        'timestamp': timestamp
-                    })
-                    # Encrypt the services list
-                    encrypted_services = encrypt_service(services, key)
-                    # Update the data dictionary with encrypted services
-                    data['encrypted_services'] = urlsafe_b64encode(encrypted_services).decode('utf-8')
-                    # Save updated data to file
-                    save_to_file(data)
-                    print(f"{MAGENTA}\nSaved to KeyCub.\n{RESET}")
+            # Enter action loop
+            action_loop(services, key, data)
 
-                    # Prompt to add more services
-                    more_services = input(
-                        f"{WHITE}\nDo you want to {YELLOW}add{WHITE} more passwords?{RESET} (yes/no): ").strip().lower()
-                    if more_services != 'yes' and more_services != 'y' and more_services != 'add':
-                        break
 
-            # Prompt to continue using the program
-            continue_using = input(
-                f"{WHITE}\nExit KeyCub?{RESET} (yes/no): ").strip().lower()
-            if continue_using == 'yes' or continue_using == 'y':
-                print(f"{GREY}Exiting...{RESET}")
-                break
+def action_loop(decrypted_services, key, data):
+    while True:
+        action = input(
+            f"{WHITE}\nDo you want to {YELLOW}add{RESET}{WHITE}, {MAGENTA}edit{RESET}{WHITE}, {RED}delete{RESET}{WHITE}, {CYAN}wipe{WHITE}, {GREEN}import{WHITE} or {RESET}exit{WHITE}:{RESET} ").strip().lower()
+        if action == "add":
+            service, username, password, timestamp = get_service_details_from_user()
+            if not service or not username or not password:
+                print(f"{RED}\nService, username and password cannot be blank. Password not saved.{RESET}")
+                continue
+            # Add new service to the decrypted services list
+            decrypted_services.append({
+                'name': service,
+                'username': username,
+                'password': password,
+                'timestamp': timestamp
+            })
+            print_all_passwords(decrypted_services)
+            print(f"{MAGENTA}\nSaved to KeyCub.\n{RESET}")
+        elif action == "edit":
             clear_screen()
+            print(f"\n{WHITE}Saved Passwords{RESET}")
+            print(f"{WHITE}----------------{RESET}")
+            for idx, service in enumerate(decrypted_services, start=1):
+                print(
+                    f"{MAGENTA}{idx}.{WHITE} {service['name']} ({service['timestamp']}){RESET}\n   Username: {service['username']}\n   Password: {service['password']}\n")
+            try:
+                service_number = int(input(
+                    f"{WHITE}\nEnter the {MAGENTA}number{WHITE} of the service you wish to edit: {RESET}").strip())
+                if service_number < 1 or service_number > len(decrypted_services):
+                    raise ValueError
+                service = decrypted_services[service_number - 1]
+                print(
+                    f"\n{YELLOW}Service to be edited:{WHITE}\n   {service['name']} ({service['timestamp']}){RESET}\n   Username: {service['username']}\n   Password: {service['password']}\n{RESET}")
+                username = input(
+                    f"{WHITE}Enter the {YELLOW}updated username{RESET}{WHITE}: {RESET}").strip()
+                password = input(
+                    f"{WHITE}Enter the {YELLOW}updated password{RESET}{WHITE}: {RESET}").strip()
+                if not username or not password:
+                    print(f"{RED}\nService, username and password cannot be blank. Password not saved.{RESET}")
+                else:
+                    service['username'] = username
+                    service['password'] = password
+                    service['timestamp'] = datetime.now().strftime('%d-%b-%Y')
+                    print_all_passwords(decrypted_services)
+                    print(f"{MAGENTA}Password updated successfully.{RESET}")
+            except ValueError:
+                print(f"{RED}\nPlease enter a valid service number from the list.{RESET}")
+        elif action == "delete":
+            clear_screen()
+            print(f"\n{WHITE}Saved Passwords{RESET}")
+            print(f"{WHITE}----------------{RESET}")
+            for idx, service in enumerate(decrypted_services, start=1):
+                print(
+                    f"{MAGENTA}{idx}.{WHITE} {service['name']} ({service['timestamp']}){RESET}\n   Username: {service['username']}\n   Password: {service['password']}\n")
+            try:
+                service_number = int(input(
+                    f"{WHITE}\nEnter the {MAGENTA}number{WHITE} of the service to be deleted: {RESET}").strip())
+                if service_number < 1 or service_number > len(decrypted_services):
+                    raise ValueError
+                service = decrypted_services[service_number - 1]
+                print(
+                    f"{RED}\nService to be deleted:\n{WHITE} {service['name']} ({service['timestamp']})\n{RESET}   Username: {service['username']}\n   Password: {service['password']}\n{RESET}")
+                confirm_delete = input(
+                    f"{RED}Are you sure you want to delete this password?{RESET} (yes/no): ").strip().lower()
+                if confirm_delete == 'y' or confirm_delete == 'yes':
+                    decrypted_services.pop(service_number - 1)
+                    print_all_passwords(decrypted_services)
+                    print(f"{MAGENTA}\nPassword deleted successfully.{RESET}")
+                else:
+                    print(f"{MAGENTA}\nDeletion cancelled.{RESET}")
+            except ValueError:
+                print(f"{RED}\nPlease enter in valid service number from the list.{RESET}")
+        elif action == "wipe":
+            confirm_wipe = input(
+                f"{YELLOW}\nAre you sure you want to wipe the whole password list?{RESET} (yes/no): ").strip().lower()
+            if confirm_wipe == 'y' or confirm_wipe == 'yes':
+                wipe_file()
+                data = {'pin_hash': None, 'encrypted_services': None, 'salt': None, 'wrong_attempts': 0}
+                save_to_file(data)
+                print(f"{MAGENTA}\nKeyCub wiped all passwords.{RESET}")
+                break
+            else:
+                print(f"{MAGENTA}\nWipe cancelled.\n{RESET}")
+            continue
+        elif action == "import":
+            file_path = input(f"{WHITE}\nDrag and drop your \"Chrome Passwords.csv\" file here, then press enter: {RESET}").strip()
+            file_path = file_path.strip('"')  # Remove quotes from the file path
+            import_from_csv(file_path, decrypted_services)
+        elif action == "exit":
+            print(f"{GREY}\nExiting...\n{RESET}")
+            sys.exit()
+        else:
+            print(f"{RED}\nPlease type out one of the listed actions.{RESET}")
+            continue
+
+        # Encrypt the updated services list
+        encrypted_services = encrypt_service(decrypted_services, key)
+        # Update the data dictionary with encrypted services
+        data['encrypted_services'] = urlsafe_b64encode(encrypted_services).decode('utf-8')
+        # Save updated data to file
+        save_to_file(data)
+
 
 if __name__ == "__main__":
     main()
