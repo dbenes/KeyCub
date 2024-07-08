@@ -13,6 +13,7 @@ import sys
 import msvcrt  # Import msvcrt for Windows-specific console input handling
 import time
 
+
 # Constants declared.
 FILE_PATH = 'MyKeyCub.bin'  # password log file
 ENCRYPTION_KEY_SIZE = 32   # AES-256 requires a 32-byte key
@@ -137,8 +138,8 @@ def generate_key_from_mac():  # Generate a key from the MAC address using PBKDF2
         p=1,
         backend=default_backend()
     )
-    key = kdf.derive(salt)  # returning the key that will be used to encrypt the mykeycub.bin file
-    return key
+    filekey = kdf.derive(salt)  # returning the key that will be used to encrypt the mykeycub.bin file
+    return filekey
 
 
 def encrypt_service(service_details, key):  # Encrypt the service details using AES CBC mode.
@@ -163,9 +164,9 @@ def decrypt_service(encrypted_data, key):  # Decrypt the encrypted service detai
 
 
 def save_to_file(data):  # Save data to a .bin file encrypted with AES using the key derived from MAC address.
-    key = generate_key_from_mac()
+    filekey = generate_key_from_mac()
     iv = os.urandom(16)
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    cipher = Cipher(algorithms.AES(filekey), modes.CBC(iv), backend=default_backend())
     encryptor = cipher.encryptor()
     padder = padding.PKCS7(algorithms.AES.block_size).padder()
     padded_data = padder.update(json.dumps(data).encode()) + padder.finalize()
@@ -176,13 +177,13 @@ def save_to_file(data):  # Save data to a .bin file encrypted with AES using the
 
 def load_from_file():  # Load data from a .bin file and decrypt using the key derived from MAC address.
     if os.path.exists(FILE_PATH):
-        key = generate_key_from_mac()
+        filekey = generate_key_from_mac()
         try:
             with open(FILE_PATH, 'rb') as file:
                 encrypted_data = file.read()
             iv = encrypted_data[:16]
             encrypted_data = encrypted_data[16:]
-            cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+            cipher = Cipher(algorithms.AES(filekey), modes.CBC(iv), backend=default_backend())
             decryptor = cipher.decryptor()
             decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
             unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
@@ -209,7 +210,7 @@ def load_from_file():  # Load data from a .bin file and decrypt using the key de
 def print_all_passwords(decrypted_services):  # print all passwords on screen for the user.
     clear_screen()  # clear the screen first
     mac_address = uuid.UUID(int=uuid.getnode()).hex[-12:]   # getting the mac address using uuid.
-    print("MAC:", mac_address)
+    print("MAC:", mac_address)  # debug mac address printing.
     print(f"\n{WHITE}Saved Passwords{RESET}")  # format for the passwords to be printed.
     print(f"{WHITE}----------------{RESET}")
     for idx, service in enumerate(decrypted_services, start=1):
@@ -242,7 +243,6 @@ def clear_screen():  # Function to clear screen + print logo.
     print(f"{GREY}Version 1.1 - David Beneš 2025 \u00A9{RESET}")
 
 
-
 def main():  # main loop.
     # Load existing data from file or initialize empty data
     data = load_from_file() or {'pin_hash': None, 'encrypted_services': None, 'salt': None, 'wrong_attempts': 0}
@@ -263,8 +263,9 @@ def main():  # main loop.
                     wrong_attempts = 0
                     data['wrong_attempts'] = wrong_attempts  # reset wrong attempt counter upon successful login.
                     save_to_file(data)  # save reset counter to the file.
-
-                    key = hashed_pin[:ENCRYPTION_KEY_SIZE]  # decrypt all services using the hashed pin as the key.
+                    padded_pin = (pin * (32 // len(pin) + 1))[:32].encode()
+                    key = padded_pin  # decrypt all services using the padded pin as the key.
+                    print("padded pin: ", padded_pin)  #debug print
                     encrypted_services = urlsafe_b64decode(data['encrypted_services'].encode('utf-8'))
                     decrypted_services = decrypt_service(encrypted_services, key)
                     print_all_passwords(decrypted_services)  # initial printing of passwords upon login.
@@ -275,6 +276,8 @@ def main():  # main loop.
                     data['wrong_attempts'] = wrong_attempts
                     save_to_file(data)  # hard save increased wrong attempt counter to file.
                     print(f"{RED}\nWrong PIN. Attempt {wrong_attempts}/{MAX_ATTEMPTS}.{RESET}\n")
+                    padded_pin = (pin * (32 // len(pin) + 1))[:32].encode()  # debug padded_print
+                    print(padded_pin)
                     if wrong_attempts >= MAX_ATTEMPTS:  # if wrong_attempts exceeds limit, wipe the file.
                         print(f"{RED}\nMaximum attempts reached. Wiping the file.\n{RESET}")
                         wipe_file()
@@ -289,12 +292,11 @@ def main():  # main loop.
                 f"{RESET}"
             )
             pin = get_pin_from_user()  # get new PIN code from user.
-
+            padded_pin = (pin * (32 // len(pin) + 1))[:32].encode()
             services = []  # initialise services list.
-
             salt = generate_salt()  # Hash PIN and encrypt empty services data
             pin_hash = hash_pin(pin, salt)
-            key = pin_hash[:ENCRYPTION_KEY_SIZE]
+            key = padded_pin
             encrypted_services = encrypt_service(services, key)
 
             data['pin_hash'] = urlsafe_b64encode(pin_hash).decode('utf-8')  # new file structure created.
@@ -307,7 +309,7 @@ def main():  # main loop.
                 time.sleep(0.1)  # wait until file has been created before continuing with script.
 
             print(f"{MAGENTA}\nYour KeyCub secure password list has been created.\n{RESET}")  # print when successful
-
+            print(padded_pin)
             action_loop(services, key, data)  # enter main user action loop.
 
 
