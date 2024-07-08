@@ -263,9 +263,9 @@ def main():  # main loop.
                     wrong_attempts = 0
                     data['wrong_attempts'] = wrong_attempts  # reset wrong attempt counter upon successful login.
                     save_to_file(data)  # save reset counter to the file.
-                    padded_pin = (pin * (32 // len(pin) + 1))[:32].encode()
+                    padded_pin = (pin * (ENCRYPTION_KEY_SIZE // len(pin) + 1))[:ENCRYPTION_KEY_SIZE].encode()
                     key = padded_pin  # decrypt all services using the padded pin as the key.
-                    print("padded pin: ", padded_pin)  #debug print
+                    print("padded pin: ", padded_pin)  # debug print
                     encrypted_services = urlsafe_b64decode(data['encrypted_services'].encode('utf-8'))
                     decrypted_services = decrypt_service(encrypted_services, key)
                     print_all_passwords(decrypted_services)  # initial printing of passwords upon login.
@@ -276,7 +276,7 @@ def main():  # main loop.
                     data['wrong_attempts'] = wrong_attempts
                     save_to_file(data)  # hard save increased wrong attempt counter to file.
                     print(f"{RED}\nWrong PIN. Attempt {wrong_attempts}/{MAX_ATTEMPTS}.{RESET}\n")
-                    padded_pin = (pin * (32 // len(pin) + 1))[:32].encode()  # debug padded_print
+                    padded_pin = (pin * (ENCRYPTION_KEY_SIZE // len(pin) + 1))[:ENCRYPTION_KEY_SIZE].encode()  # debug padded_print
                     print(padded_pin)
                     if wrong_attempts >= MAX_ATTEMPTS:  # if wrong_attempts exceeds limit, wipe the file.
                         print(f"{RED}\nMaximum attempts reached. Wiping the file.\n{RESET}")
@@ -292,7 +292,7 @@ def main():  # main loop.
                 f"{RESET}"
             )
             pin = get_pin_from_user()  # get new PIN code from user.
-            padded_pin = (pin * (32 // len(pin) + 1))[:32].encode()
+            padded_pin = (pin * (ENCRYPTION_KEY_SIZE // len(pin) + 1))[:ENCRYPTION_KEY_SIZE].encode()
             services = []  # initialise services list.
             salt = generate_salt()  # Hash PIN and encrypt empty services data
             pin_hash = hash_pin(pin, salt)
