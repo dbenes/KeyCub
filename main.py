@@ -211,8 +211,8 @@ def print_all_passwords(decrypted_services):  # print all passwords on screen fo
     clear_screen()  # clear the screen first
     mac_address = uuid.UUID(int=uuid.getnode()).hex[-12:]   # getting the mac address using uuid.
     print("MAC:", mac_address)  # debug mac address printing.
-    print(f"\n{WHITE}Saved Passwords{RESET}")  # format for the passwords to be printed.
-    print(f"{WHITE}----------------{RESET}")
+    print(f"\n{WHITE}Saved Passwords{RESET}"
+    f"\n{WHITE}----------------{RESET}\n")
     for idx, service in enumerate(decrypted_services, start=1):
         print(
             f"{MAGENTA}{idx}.{WHITE} {service['name']} ({service['timestamp']}){RESET}\n"
@@ -276,7 +276,7 @@ def main():  # main loop.
                     data['wrong_attempts'] = wrong_attempts
                     save_to_file(data)  # hard save increased wrong attempt counter to file.
                     print(f"{RED}\nWrong PIN. Attempt {wrong_attempts}/{MAX_ATTEMPTS}.{RESET}\n")
-                    padded_pin = (pin * (ENCRYPTION_KEY_SIZE // len(pin) + 1))[:ENCRYPTION_KEY_SIZE].encode()  # debug padded_print
+                    padded_pin = (pin * (ENCRYPTION_KEY_SIZE // len(pin) + 1))[:ENCRYPTION_KEY_SIZE].encode()  # debug
                     print(padded_pin)
                     if wrong_attempts >= MAX_ATTEMPTS:  # if wrong_attempts exceeds limit, wipe the file.
                         print(f"{RED}\nMaximum attempts reached. Wiping the file.\n{RESET}")
@@ -334,8 +334,6 @@ def action_loop(decrypted_services, key, data):  # main action loop
             print(f"{MAGENTA}\nSaved to KeyCub.\n{RESET}")
         elif action == "edit":  # Edit a service from the list.
             clear_screen()  # printing list when user chooses to edit
-            print(f"\n{WHITE}Saved Passwords{RESET}")
-            print(f"{WHITE}----------------{RESET}")
             for idx, service in enumerate(decrypted_services, start=1):
                 print(
                     f"{MAGENTA}{idx}.{WHITE} {service['name']} ({service['timestamp']}){RESET}\n"
