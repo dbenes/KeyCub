@@ -1,0 +1,37 @@
+import datetime
+import statistics
+
+def measure_execution_time(target_function, input_size, m):
+    timings = []
+    for _ in range(m):
+        start_time = datetime.datetime.now()
+        target_function(input_size)
+        end_time = datetime.datetime.now()
+        execution_time = (end_time - start_time).total_seconds() * 1000.0  # Convert to milliseconds
+        rounded_time = round(execution_time, 2)  # Round execution_time to 2 decimal places
+        timings.append(rounded_time)
+        print(f"Iteration {_ + 1}: {execution_time:.2f} ms")
+
+    return timings
+
+# Function to generate random numbers with specified count
+import random
+
+def generate_random_numbers(count):
+    random_list = [random.random() for _ in range(count)]
+    return random_list
+
+# Example usage to measure execution time for generating 256, 512, and 1024 random numbers
+input_sizes = [25600, 51200, 102400]  # Sizes of random number lists to generate
+m = 10  # Number of times to repeat the measurement process for each input size
+
+fingerprint = []
+
+for size in input_sizes:
+    timings = measure_execution_time(generate_random_numbers, size, m)
+    mode_time = statistics.mode(timings)
+    fingerprint.append(mode_time)
+    print(f"Mode for {size} random numbers: {mode_time:.2f} ms")
+    print()
+
+print("Fingerprint (modes in milliseconds):", [f"{time:.2f}" for time in fingerprint])
