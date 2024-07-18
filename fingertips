@@ -1,5 +1,6 @@
 import time
 import statistics
+import json
 
 def measure_execution_time(target_function, input_size, m):
     timings = []
@@ -23,15 +24,34 @@ def generate_random_numbers(count):
 
 # Example usage to measure execution time for generating 2560, 5120, and 10240 random numbers
 input_sizes = [25600, 51200, 102400]  # Sizes of random number lists to generate
-m = 5  # Number of times to repeat the measurement process for each input size
-0
-fingerprint = []
+m = 50  # Number of times to repeat the measurement process for each input size
 
+# Initialize a list to store timing results grouped by iteration
+grouped_timings = [[] for _ in range(m)]
+
+# Measure and store timings
 for size in input_sizes:
     timings = measure_execution_time(generate_random_numbers, size, m)
-    mode_time = statistics.mode(timings)
+    for i in range(m):
+        grouped_timings[i].append(timings[i])
+
+# Print mode times for each input size
+fingerprint = []
+for size_index, size in enumerate(input_sizes):
+    size_timings = [group[size_index] for group in grouped_timings]
+    mode_time = statistics.mode(size_timings)
     fingerprint.append(mode_time)
     print(f"Mode for {size} random numbers: {mode_time:.1f} ms")
     print()
 
+# Print fingerprint (modes)
 print("Fingerprint (modes in milliseconds):", [f"{time:.1f}" for time in fingerprint])
+
+# Save the grouped timings to a JSON file
+with open("timing_results.json", "w") as file:
+    json.dump(grouped_timings, file, indent=4)
+
+# Print the grouped timings for verification
+print("Grouped Timings by Iteration:")
+for i, group in enumerate(grouped_timings, start=1):
+    print(f"Iteration {i}: {group}")
