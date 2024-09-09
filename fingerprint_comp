@@ -24,11 +24,11 @@ def measure_time_diff(sleep_duration):
     process_time = end_process_time - start_process_time
 
     # Return the difference rounded to 4 decimal places
-    return round(datetime_time - process_time, 4)
+    return round(datetime_time - process_time, 3)
 
 
 def generate_new_results(num_iterations=50):
-    sleep_durations = [0.004, 0.008, 0.016, 0.032]
+    sleep_durations = [0.008, 0.016, 0.032, 0.064]
     all_differences = []
 
     # Generate new timing differences
@@ -109,6 +109,10 @@ def main():
     # Compare previous modes to new results
     similarity_percentage_previous_to_new = compare_previous_modes_to_new(previous_modes, new_results)
     print(f"Similarity percentage (Previous to New): {similarity_percentage_previous_to_new:.2f}%")
+
+    # Combine the two similarity scores using a simple average
+    similarity_score = (similarity_percentage_new_to_previous + similarity_percentage_previous_to_new)
+    print(f"Combined Similarity Score: {similarity_score:.2f}%")
 
 
 if __name__ == "__main__":
