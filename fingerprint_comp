@@ -2,6 +2,12 @@ import time
 from datetime import datetime
 import json
 from statistics import mode, StatisticsError
+import math
+
+# Return the difference always rounded down to 4 decimal places
+def round_down(value, decimals):
+    factor = 10 ** decimals
+    return math.floor(value * factor) / factor
 
 def measure_time_diff(sleep_duration):
     # Measure time using datetime API
@@ -24,11 +30,11 @@ def measure_time_diff(sleep_duration):
     process_time = end_process_time - start_process_time
 
     # Return the difference rounded to 4 decimal places
-    return round(datetime_time - process_time, 3)
+    return round_down(datetime_time - process_time, 4)
 
 
-def generate_new_results(num_iterations=50):
-    sleep_durations = [0.008, 0.016, 0.032, 0.064]
+def generate_new_results(num_iterations=100):
+    sleep_durations = [0.016, 0.032, 0.064]
     all_differences = []
 
     # Generate new timing differences
@@ -45,7 +51,7 @@ def generate_new_results(num_iterations=50):
 def find_modes(differences):
     # Find modes for each sleep duration
     modes = []
-    for i in range(4):  # We have 3 sleep durations
+    for i in range(3):  # We have 3 sleep durations
         try:
             # Extract the differences for the i-th sleep duration
             sleep_diffs = [diff[i] for diff in differences]
@@ -66,7 +72,7 @@ def compare_modes_to_previous(modes, previous_results):
                 total_matches += 1
 
     # Calculate percentage similarity
-    return (total_matches / (total_entries * 4)) * 100  # *4 because we have 3 sleep durations per entry
+    return (total_matches / (total_entries * 3)) * 100  # 3 because we have 3 sleep durations per entry
 
 
 def compare_previous_modes_to_new(previous_modes, new_results):
