@@ -1,0 +1,56 @@
+import time
+from datetime import datetime
+import json
+
+
+def measure_time_diff(sleep_duration):
+    # Measure time using datetime API
+    start_datetime = datetime.now()
+
+    # Measure time using process time
+    start_process_time = time.process_time()
+
+    # Sleep for the specified duration
+    time.sleep(sleep_duration)
+
+    # Measure time using datetime API
+    end_datetime = datetime.now()
+
+    # Measure time using process time
+    end_process_time = time.process_time()
+
+    # Calculate the time differences
+    datetime_time = (end_datetime - start_datetime).total_seconds()
+    process_time = end_process_time - start_process_time
+
+    # Calculate the difference between the two
+    difference = datetime_time - process_time
+
+    # Return the difference rounded to 4 decimal places
+    return round(difference, 4)
+
+
+def main():
+    num_iterations = 50
+    sleep_durations = [0.004, 0.008, 0.016, 0.032]
+    all_differences = []
+
+    # Measure and store the differences for each sleep duration
+    for _ in range(num_iterations):
+        iteration_differences = []
+        for duration in sleep_durations:
+            difference = measure_time_diff(duration)
+            iteration_differences.append(difference)
+
+        # Append the results for the current iteration
+        all_differences.append(iteration_differences)
+
+    # Save results to a JSON file
+    with open("timing_differences.json", "w") as f:
+        json.dump(all_differences, f, indent=4)
+
+    print("Results saved to timing_differences.json")
+
+
+if __name__ == "__main__":
+    main()
