@@ -1,0 +1,118 @@
+import time
+from datetime import datetime
+import json
+from statistics import mode, StatisticsError
+
+def measure_time_diff(sleep_duration):
+    # Measure time using datetime API
+    start_datetime = datetime.now()
+
+    # Measure time using process time
+    start_process_time = time.process_time()
+
+    # Sleep for the specified duration
+    time.sleep(sleep_duration)
+
+    # Measure time using datetime API
+    end_datetime = datetime.now()
+
+    # Measure time using process time
+    end_process_time = time.process_time()
+
+    # Calculate the time differences
+    datetime_time = (end_datetime - start_datetime).total_seconds()
+    process_time = end_process_time - start_process_time
+
+    # Return the difference rounded to 4 decimal places
+    return round(datetime_time - process_time, 4)
+
+
+def generate_new_results(num_iterations=50):
+    sleep_durations = [0.004, 0.008, 0.016, 0.032]
+    all_differences = []
+
+    # Generate new timing differences
+    for _ in range(num_iterations):
+        iteration_differences = []
+        for duration in sleep_durations:
+            difference = measure_time_diff(duration)
+            iteration_differences.append(difference)
+        all_differences.append(iteration_differences)
+
+    return all_differences
+
+
+def find_modes(differences):
+    # Find modes for each sleep duration
+    modes = []
+    for i in range(4):  # We have 3 sleep durations
+        try:
+            # Extract the differences for the i-th sleep duration
+            sleep_diffs = [diff[i] for diff in differences]
+            # Calculate mode for that duration
+            modes.append(mode(sleep_diffs))
+        except StatisticsError:
+            modes.append(None)  # Handle if no unique mode
+    return modes
+
+
+def compare_modes_to_previous(modes, previous_results):
+    total_matches = 0
+    total_entries = len(previous_results)
+
+    for entry in previous_results:
+        for i, mode_value in enumerate(modes):
+            if mode_value is not None and entry[i] == mode_value:
+                total_matches += 1
+
+    # Calculate percentage similarity
+    return (total_matches / (total_entries * 4)) * 100  # *4 because we have 3 sleep durations per entry
+
+
+def compare_previous_modes_to_new(previous_modes, new_results):
+    total_matches = 0
+    total_entries = len(new_results)
+
+    for entry in new_results:
+        for i, mode_value in enumerate(previous_modes):
+            if mode_value is not None and entry[i] == mode_value:
+                total_matches += 1
+
+    # Calculate percentage similarity
+    return (total_matches / (total_entries * 4)) * 100  # *3 because we have 3 sleep durations per entry
+
+
+def main():
+    # Generate new timing differences
+    new_results = generate_new_results()
+
+    # Find the modes for the new results
+    new_modes = find_modes(new_results)
+    print(f"New modes: {new_modes}")
+
+    # Load previous results from JSON
+    try:
+        with open("timing_differences.json", "r") as f:
+            previous_results = json.load(f)
+    except FileNotFoundError:
+        print("Error: timing_differences.json file not found.")
+        return
+
+    # Find the modes for the previous results
+    previous_modes = find_modes(previous_results)
+    print(f"Previous modes: {previous_modes}")
+
+    # Compare new modes to previous results
+    similarity_percentage_new_to_previous = compare_modes_to_previous(new_modes, previous_results)
+    print(f"Similarity percentage (New to Previous): {similarity_percentage_new_to_previous:.2f}%")
+
+    # Compare previous modes to new results
+    similarity_percentage_previous_to_new = compare_previous_modes_to_new(previous_modes, new_results)
+    print(f"Similarity percentage (Previous to New): {similarity_percentage_previous_to_new:.2f}%")
+
+
+if __name__ == "__main__":
+    for i in range(5):  # Run 5 times
+        print(f"Run {i + 1}:")
+        main()
+        print("-" * 40)  # Separator for each run
