@@ -1,8 +1,12 @@
 import time
 from datetime import datetime
 import json
+import math
 
-
+# Return the difference always rounded down to 4 decimal places
+def round_down(value, decimals):
+    factor = 10 ** decimals
+    return math.floor(value * factor) / factor
 def measure_time_diff(sleep_duration):
     # Measure time using datetime API
     start_datetime = datetime.now()
@@ -27,12 +31,12 @@ def measure_time_diff(sleep_duration):
     difference = datetime_time - process_time
 
     # Return the difference rounded to 4 decimal places
-    return round(difference, 3)
+    return round_down(difference, 4)
 
 
 def main():
-    num_iterations = 50
-    sleep_durations = [0.008, 0.016, 0.032, 0.064]
+    num_iterations = 100
+    sleep_durations = [0.016, 0.032, 0.064]
     all_differences = []
 
     # Measure and store the differences for each sleep duration
