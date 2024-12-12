@@ -2,7 +2,7 @@ import os
 import csv
 import ctypes
 import json
-import uuid
+import subprocess
 from datetime import datetime
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 from cryptography.hazmat.backends import default_backend
@@ -101,6 +101,15 @@ def get_pin_from_user():  # function to receive pin code from user.
     print(f"{RED}Invalid PIN code. Must be exactly 6 digits.{RESET}")
 
 
+def get_usb_controller_device_id():
+    try:
+        output = subprocess.check_output("wmic path Win32_USBController get DeviceID", shell=True).decode()
+        return output.split("\n")[1].strip()
+    except Exception as e:
+        print(e)
+        return None
+
+
 def get_service_details_from_user():  # Prompt user to enter service details (name, username, password).
     service = input(f"\n{WHITE}Enter a {YELLOW}new service name{RESET}: ").strip()
     username = input(f"{WHITE}Enter a {YELLOW}new username{RESET}: ").strip()
@@ -127,9 +136,9 @@ def generate_salt():  # generate a random salt using scrypt.
     return salt
 
 
-def generate_key_from_mac():  # Generate a key from the MAC address using PBKDF2 with SHA-256.
-    mac_address = uuid.UUID(int=uuid.getnode()).hex[-12:]   # getting the mac address using uuid.
-    salt = mac_address.encode()
+def generate_key_from_usb_serial():  # Generate a key from the usb controller serial address using PBKDF2 with SHA-256.
+    usb_serial = get_usb_controller_device_id()   # getting the usb serial using subprocess library.
+    salt = usb_serial.encode()
     kdf = Scrypt(
         salt=salt,
         length=ENCRYPTION_KEY_SIZE,
@@ -163,8 +172,8 @@ def decrypt_service(encrypted_data, key):  # Decrypt the encrypted service detai
     return json.loads(unpadded_data.decode('utf-8'))
 
 
-def save_to_file(data):  # Save data to a .bin file encrypted with AES using the key derived from MAC address.
-    filekey = generate_key_from_mac()
+def save_to_file(data):  # Save data to a .bin file encrypted with AES using the key derived from USB serial.
+    filekey = generate_key_from_usb_serial()
     iv = os.urandom(16)
     cipher = Cipher(algorithms.AES(filekey), modes.CBC(iv), backend=default_backend())
     encryptor = cipher.encryptor()
@@ -175,9 +184,9 @@ def save_to_file(data):  # Save data to a .bin file encrypted with AES using the
         file.write(iv + encrypted_data)
 
 
-def load_from_file():  # Load data from a .bin file and decrypt using the key derived from MAC address.
+def load_from_file():  # Load data from a .bin file and decrypt using the key derived from USB serial.
     if os.path.exists(FILE_PATH):
-        filekey = generate_key_from_mac()
+        filekey = generate_key_from_usb_serial()
         try:
             with open(FILE_PATH, 'rb') as file:
                 encrypted_data = file.read()
@@ -193,6 +202,7 @@ def load_from_file():  # Load data from a .bin file and decrypt using the key de
             print(
                 f"Exception details: {str(e)}"
                 f"{RED}Your KeyCub list has been corrupted, it may have been tampered with.\n"
+                f"file key:", filekey,
                 f"{WHITE}Would you like to {CYAN}wipe it{WHITE}?{RESET} (yes/no)"
             )
             response = input().strip().lower()
@@ -209,8 +219,6 @@ def load_from_file():  # Load data from a .bin file and decrypt using the key de
 
 def print_all_passwords(decrypted_services):  # print all passwords on screen for the user.
     clear_screen()  # clear the screen first
-    mac_address = uuid.UUID(int=uuid.getnode()).hex[-12:]   # getting the mac address using uuid.
-    print("MAC:", mac_address)  # debug mac address printing.
     print(f"\n{WHITE}Saved Passwords{RESET}"
     f"\n{WHITE}----------------{RESET}\n")
     for idx, service in enumerate(decrypted_services, start=1):
@@ -240,7 +248,7 @@ def clear_screen():  # Function to clear screen + print logo.
     print(f" / /| |  /  __/ / /_/ / / /___   / /_/ /  / /_/ /")
     print(f"{YELLOW}/_/ |_|  \___/  \__, /  \____/   \__,_/  /_.___/ ")
     print(f"               /____/                                    ")
-    print(f"{GREY}Version 1.1 - David Beneš 2025 \u00A9{RESET}")
+    print(f"{GREY}Version 1.1 - Niutoh Security 2025 \u00A9{RESET}")
 
 
 def main():  # main loop.
@@ -265,7 +273,6 @@ def main():  # main loop.
                     save_to_file(data)  # save reset counter to the file.
                     padded_pin = (pin * (ENCRYPTION_KEY_SIZE // len(pin) + 1))[:ENCRYPTION_KEY_SIZE].encode()
                     key = padded_pin  # decrypt all services using the padded pin as the key.
-                    print("padded pin: ", padded_pin)  # debug print
                     encrypted_services = urlsafe_b64decode(data['encrypted_services'].encode('utf-8'))
                     decrypted_services = decrypt_service(encrypted_services, key)
                     print_all_passwords(decrypted_services)  # initial printing of passwords upon login.
@@ -276,8 +283,6 @@ def main():  # main loop.
                     data['wrong_attempts'] = wrong_attempts
                     save_to_file(data)  # hard save increased wrong attempt counter to file.
                     print(f"{RED}\nWrong PIN. Attempt {wrong_attempts}/{MAX_ATTEMPTS}.{RESET}\n")
-                    padded_pin = (pin * (ENCRYPTION_KEY_SIZE // len(pin) + 1))[:ENCRYPTION_KEY_SIZE].encode()  # debug
-                    print(padded_pin)
                     if wrong_attempts >= MAX_ATTEMPTS:  # if wrong_attempts exceeds limit, wipe the file.
                         print(f"{RED}\nMaximum attempts reached. Wiping the file.\n{RESET}")
                         wipe_file()
@@ -309,16 +314,22 @@ def main():  # main loop.
                 time.sleep(0.1)  # wait until file has been created before continuing with script.
 
             print(f"{MAGENTA}\nYour KeyCub secure password list has been created.\n{RESET}")  # print when successful
-            print(padded_pin)
             action_loop(services, key, data)  # enter main user action loop.
 
 
 def action_loop(decrypted_services, key, data):  # main action loop
     while True:
-        action = input(  # Main action list, user will be returned to this.
-            f"{WHITE}\nDo you want to {YELLOW}add{RESET}{WHITE}, {MAGENTA}edit{RESET}{WHITE}, "
-            f"{RED}delete{RESET}{WHITE}, {CYAN}wipe{WHITE}, {GREEN}import{WHITE} or {RESET}exit{WHITE}:{RESET} "
-        ).strip().lower()
+        if decrypted_services:  # If the decrypted_services list is not empty
+            action = input(  # Main action list with all options
+                f"{WHITE}\nDo you want to {YELLOW}add{RESET}{WHITE}, {MAGENTA}edit{RESET}{WHITE}, "
+                f"{RED}delete{RESET}{WHITE}, {CYAN}wipe{WHITE}, {GREEN}import{WHITE} or {RESET}exit{WHITE}:{RESET} "
+            ).strip().lower()
+        else:  # If the decrypted_services list is empty
+            action = input(  # Limited action list
+                f"{WHITE}\nDo you want to {YELLOW}add{RESET}{WHITE}, "
+                f"{GREEN}import{WHITE} or {RESET}exit{WHITE}:{RESET} "
+            ).strip().lower()
+
         if action == "add":  # if user types add.
             service, username, password, timestamp = get_service_details_from_user()
             if not service or not username or not password:
@@ -334,6 +345,7 @@ def action_loop(decrypted_services, key, data):  # main action loop
             print(f"{MAGENTA}\nSaved to KeyCub.\n{RESET}")
         elif action == "edit":  # Edit a service from the list.
             clear_screen()  # printing list when user chooses to edit
+            print("\n")
             for idx, service in enumerate(decrypted_services, start=1):
                 print(
                     f"{MAGENTA}{idx}.{WHITE} {service['name']} ({service['timestamp']}){RESET}\n"
@@ -358,7 +370,7 @@ def action_loop(decrypted_services, key, data):  # main action loop
                     f"{WHITE}Enter the {YELLOW}updated password{GREY} "
                     f"(leave blank to cancel){WHITE}: {RESET}").strip()
                 if not username or not password:  # cancelling if either password or username is blank.
-                    print(f"{RED}\nService, username and password cannot be blank. Password not saved.{RESET}")
+                    print(f"{RED}\nService, username and password cannot be blank. New password not saved.{RESET}")
                 else:
                     service['username'] = username  # updating details in mykeycub.bin file
                     service['password'] = password
