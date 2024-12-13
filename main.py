@@ -103,10 +103,12 @@ def get_pin_from_user():  # function to receive pin code from user.
 
 def get_usb_controller_device_id():
     try:
-        output = subprocess.check_output("wmic path Win32_USBController get DeviceID", shell=True).decode()
-        return output.split("\n")[1].strip()
+        # PowerShell command to get a single USB Controller DeviceID
+        command = "(Get-WmiObject Win32_USBController | Select-Object -ExpandProperty DeviceID | Select-Object -First 1)"
+        output = subprocess.check_output(["powershell", "-Command", command], shell=True).decode().strip()
+        return output if output else None
     except Exception as e:
-        print(e)
+        print(f"Error: {e}")
         return None
 
 
