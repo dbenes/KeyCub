@@ -331,7 +331,10 @@ def action_loop(decrypted_services, key, data):  # main action loop
                 f"{WHITE}\nDo you want to {YELLOW}add{RESET}{WHITE}, "
                 f"{GREEN}import{WHITE} or {RESET}exit{WHITE}:{RESET} "
             ).strip().lower()
-
+        if action =="debug":
+            print("USB device:", get_usb_controller_device_id())
+            print("key: ", key)
+            print("salt: ", generate_salt())
         if action == "add":  # if user types add.
             service, username, password, timestamp = get_service_details_from_user()
             if not service or not username or not password:
